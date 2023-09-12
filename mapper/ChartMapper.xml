@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="chartMapper">
+	<!-- 최근 7일간에 해당하면 매출데이터중에 store_id에 해당하는 값 -->
+	<select id="DailyTotalAmount" resultType="ChartVO">
+		SELECT
+		DATE(requestedAt) AS date,
+		SUM(amount) AS total_amount
+		FROM
+		payment
+		WHERE
+		DATE(requestedAt) BETWEEN CURDATE() - INTERVAL 6 DAY AND CURDATE()
+		AND
+		store_id = #{storeId}
+		GROUP BY DATE(requestedAt)
+		ORDER BY DATE(requestedAt);
+	</select>
+
+	<!-- 이전달 7일의 데이터: 현재날짜기준 1달전의 같은 기간 데이터 -->
+	<select id="XTotalAmount" resultType="ChartVO">
+	    SELECT
+	    DATE(requestedAt) AS date,
+	    SUM(amount) AS total_amount
+	    FROM
+	    payment
+	    WHERE
+	    DATE(requestedAt)
+	    BETWEEN DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), INTERVAL 6 DAY) 
+	    AND DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+	    AND store_id = #{storeId}
+	    GROUP BY DATE(requestedAt)
+	    ORDER BY DATE(requestedAt);
+	</select>
+	<!-- 2달전 7일의 데이터: 현재날짜기준 1달전의 같은 기간 데이터 -->
+	<select id="twoTotalAmount" resultType="ChartVO">
+	    SELECT
+	    DATE(requestedAt) AS date,
+	    SUM(amount) AS total_amount
+	    FROM
+	    payment
+	    WHERE
+	    DATE(requestedAt)
+	    BETWEEN DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 2 MONTH), INTERVAL 6 DAY) 
+	    AND DATE_SUB(CURDATE(), INTERVAL 2 MONTH)
+	    AND store_id = #{storeId}
+	    GROUP BY DATE(requestedAt)
+	    ORDER BY DATE(requestedAt);
+	</select>
+
+	<!--이번달매출:현재날짜 기준 일치하는 달에 총 매출데이터 -->
+	<select id="thisMonthTotalAmount" resultType="ChartVO">
+		SELECT
+		DATE(requestedAt) AS date,
+		SUM(amount) AS total_amount
+		FROM
+		payment
+		WHERE
+		MONTH(requestedAt) = MONTH(CURDATE())
+		AND YEAR(requestedAt) = YEAR(CURDATE())
+		AND store_id = #{storeId}
+		GROUP BY DATE(requestedAt)
+		ORDER BY DATE(requestedAt);
+	</select>
+	<!-- 저번달 매출: 현재날짜 기준 이전달에 총 매출데이터 -->
+	<select id="lastMonthTotalAmount" resultType="ChartVO">
+		SELECT
+		DATE(requestedAt) AS date,
+		SUM(amount) AS total_amount
+		FROM
+		payment
+		WHERE
+		MONTH(requestedAt) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+		AND YEAR(requestedAt) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+		AND store_id = #{storeId}
+		GROUP BY DATE(requestedAt)
+		ORDER BY DATE(requestedAt);
+	</select>
+	<!-- 2달 전 매출: 현재 날짜를 기준으로 2달 전에 해당하는 총 매출 데이터 -->
+	<select id="twoMonthsAgoTotalAmount" resultType="ChartVO">
+		SELECT
+		DATE(requestedAt) AS date,
+		SUM(amount) AS total_amount
+		FROM
+		payment
+		WHERE
+		MONTH(requestedAt) = MONTH(DATE_SUB(CURDATE(), INTERVAL 2 MONTH))
+		AND YEAR(requestedAt) = YEAR(DATE_SUB(CURDATE(), INTERVAL 2 MONTH))
+		AND store_id = #{storeId}
+		GROUP BY DATE(requestedAt)
+		ORDER BY DATE(requestedAt);
+	</select>
+	
+
+<!-- 재방문 차트 신규고객과 재방문 고객의 숫자를 찾는 쿼리  -->
+
+<!--이번달 신규고객 수  --> 
+<select id="findthisMonthNewCustomers" resultType="return_CustomerCountVO">
+  SELECT COUNT(*) as new_customers
+  FROM (
+    SELECT order_id 
+    FROM payment
+    WHERE store_id = #{storeId}
+    GROUP BY order_id
+    HAVING MIN(requestedAt) BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW())
+  ) as subquery
+</select>
+
+
+
+
+
+
+<!-- 이번달 재방문고객 수 -->
+<select id="findthisMonthReturningCustomers" resultType="return_CustomerCountVO">
+  SELECT COUNT(*) as returning_customers
+  FROM (
+    SELECT order_id 
+    FROM payment
+    WHERE store_id = #{storeId}
+    AND requestedAt BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW())
+    GROUP BY order_id
+    HAVING COUNT(*) >= 2
+  ) as subquery
+</select>
+
+
+
+
+<!-- 저번달 신규고객 수 -->
+<select id="findLastMonthNewCustomers" resultType="return_CustomerCountVO">
+  SELECT COUNT(*) as new_customers
+  FROM (
+    SELECT order_id 
+    FROM payment
+    WHERE store_id = #{storeId}
+    GROUP BY order_id
+    HAVING MIN(requestedAt) BETWEEN DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH) ,'%Y-%m-01') AND LAST_DAY(DATE_SUB(NOW(), INTERVAL 1 MONTH))
+  ) as subquery
+</select>
+
+
+
+
+<!-- 저번달 재방문고객 수 -->
+<select id="findLastMonthReturningCustomers" resultType="return_CustomerCountVO">
+  SELECT COUNT(*) as returning_customers
+  FROM (
+    SELECT order_id 
+    FROM payment
+    WHERE store_id = #{storeId}
+    AND requestedAt BETWEEN DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH) ,'%Y-%m-01') AND LAST_DAY(DATE_SUB(NOW(), INTERVAL 1 MONTH))
+    GROUP BY order_id
+    HAVING COUNT(*) >= 2
+  ) as subquery
+</select>
+
+
+
+
+
+
+<!-- 여러번 주문한(2-5) 고객님들 수 찾기  -->
+<!-- 2회 주문한 고객 찾기 -->
+<select id="find2Customers" resultType="return_OrderCountVO">
+    SELECT COUNT(order_id) as twoOrderCustomers
+    FROM (
+        SELECT order_id
+        FROM payment
+        WHERE store_id = #{storeId}
+        GROUP BY order_id
+        HAVING COUNT(order_id) = 2
+    ) as temp
+</select>
+
+<!-- 3회 주문한 고객 찾기 -->
+<select id="find3Customers" resultType="return_OrderCountVO">
+    SELECT COUNT(order_id) as threeOrderCustomers
+    FROM (
+        SELECT order_id
+        FROM payment
+        WHERE store_id = #{storeId}
+        GROUP BY order_id
+        HAVING COUNT(order_id) = 3
+    ) as temp
+</select>
+
+<!-- 4회 주문한 고객 찾기 -->
+<select id="find4Customers" resultType="return_OrderCountVO">
+    SELECT COUNT(order_id) as fourOrderCustomers
+    FROM (
+        SELECT order_id
+        FROM payment
+        WHERE store_id = #{storeId}
+        GROUP BY order_id
+        HAVING COUNT(order_id) = 4
+    ) as temp
+</select>
+
+<!-- 5회 주문한 고객 찾기 -->
+<select id="find5Customers" resultType="return_OrderCountVO">
+    SELECT COUNT(order_id) as fiveOrderCustomers
+    FROM (
+        SELECT order_id
+        FROM payment
+        WHERE store_id = #{storeId}
+        GROUP BY order_id
+        HAVING COUNT(order_id) = 5
+    ) as temp
+</select>
+
+<!--신규고객과 재방문 고객들이 주문한 총 금액  -->
+<!-- 신규 고객 주문 금액 계산 -->
+<!-- 이번달 신규 고객 주문 금액 계산 -->
+<select id="thisMonthNewCustomerOrderTotal" resultType="return_OrderTotalVO">
+  SELECT COUNT(order_id) as newOrdersThisMonth, SUM(amount) as newOrderTotalThisMonth
+  FROM payment
+  WHERE store_id = #{storeId}
+  AND MONTH(requestedAt) = MONTH(CURRENT_DATE())
+  AND YEAR(requestedAt) = YEAR(CURRENT_DATE())
+  AND order_id NOT IN (
+    SELECT order_id 
+    FROM payment
+    WHERE store_id = #{storeId}
+    AND ((YEAR(requestedAt) &lt; YEAR(CURRENT_DATE())) OR (YEAR(requestedAt) = YEAR(CURRENT_DATE()) 
+    AND MONTH(requestedAt) &lt; MONTH(CURRENT_DATE())))
+  )
+</select>
+
+<!-- 이번달 재방문 고객 주문 금액 계산 -->
+<select id="thisMonthReturnCustomerOrderTotal" resultType="return_OrderTotalVO">
+  SELECT COUNT(order_id) as returningOrdersThisMonth, SUM(amount) as returningOrderTotalThisMonth
+  FROM payment
+  WHERE store_id = #{storeId}
+  AND MONTH(requestedAt) = MONTH(CURRENT_DATE())
+  AND YEAR(requestedAt) = YEAR(CURRENT_DATE())
+  AND order_id IN (
+    SELECT order_id 
+    FROM payment
+    WHERE store_id = #{storeId}
+    AND ((YEAR(requestedAt) &lt; YEAR(CURRENT_DATE())) OR (YEAR(requestedAt) = YEAR(CURRENT_DATE()) 
+    AND MONTH(requestedAt) &lt; MONTH(CURRENT_DATE())))
+  )
+</select>
+
+<!-- 저번달 신규 고객 주문 금액 계산 -->
+<select id="lastMonthNewCustomerOrderTotal" resultType="return_OrderTotalVO">
+  SELECT COUNT(order_id) as newOrdersLastMonth, SUM(amount) as newOrdersTotalLastMonth
+  FROM payment
+  WHERE store_id = #{storeId}
+  AND MONTH(requestedAt) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+  AND YEAR(requestedAt) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+  AND order_id NOT IN (
+    SELECT order_id 
+    FROM payment
+    WHERE store_id = #{storeId}
+    AND ((YEAR(requestedAt) &lt; YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))) OR (YEAR(requestedAt) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH)) AND MONTH(requestedAt) &lt; MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))))
+  )
+</select>
+
+<!-- 저번달 재방문 고객 주문 금액 계산 -->
+<select id="lastMonthReturnCustomerOrderTotal" resultType="return_OrderTotalVO">
+  SELECT COUNT(order_id) as returningOrdersLastMonth, SUM(amount) as returningOrderTotalLastMonth
+  FROM payment
+  WHERE store_id = #{storeId}
+  AND MONTH(requestedAt) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+  AND YEAR(requestedAt) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+  AND order_id IN (
+    SELECT order_id 
+    FROM payment
+    WHERE store_id = #{storeId}
+    AND ((YEAR(requestedAt) &lt; YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))) OR (YEAR(requestedAt) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH)) AND MONTH(requestedAt) &lt; MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))))
+  )
+</select>
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+

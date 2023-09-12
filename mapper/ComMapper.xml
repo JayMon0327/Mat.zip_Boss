@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com">
+
+	<insert id="create" parameterType="ComVO">
+		insert into com values
+		(#{board_id},null, #{writer}, #{content},now())
+	</insert>
+	<delete id="del" parameterType="int">
+		delete from com where reply_id =
+		#{reply_id}
+	</delete>
+
+	<update id="up" parameterType="ComVO">
+		update com set content =
+		#{content} where reply_id = #{reply_id}
+	</update>
+
+	<select id="one" parameterType="int" resultType="ComVO">
+		select * from com where writer = #{writer}
+	</select>
+	<select id="list" resultType="ComVO">
+		select * from com where board_id = #{board_id}
+	</select>
+	<select id="count" resultType="int">
+        SELECT COUNT(*) FROM com where board_id = #{board_id}
+    </select>
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+

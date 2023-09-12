@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="boss">
+
+	<!-- insert, delete, update는 무조건 resultType = "int"이므로 프로그래머가 써주지 않아도 이미 
+		resultType = "int"로 본다.! -->
+
+	<insert id="insertJoinedData" parameterType="boss_memberVO">
+	    insert into boss_member (user_id, password, store_id, accountDate, nickname)
+	    select m.user_id, m.password, #{store_id}, now(), m.nickName
+	    from mz_member m
+	    where m.user_id = #{user_id}
+	</insert>
+
+	<select id="boss_login" parameterType="String"
+		resultType="boss_memberVO">
+		select * from boss_member where user_id = #{user_id} and
+		password =
+		#{password}
+	</select>
+	<!-- 중복 체크를 위한 쿼리 -->
+	<select id="checkStoreId" resultType="int">
+	    SELECT COUNT(*) FROM boss_member WHERE store_id = #{storeId}
+	</select>
+	<!-- vo와 db table의 같을 때는 자동으로 컬럼명과 동일한 vo의 변수에 자동으로 넣어줌 . vo와 db table이 
+		다를 때는 수동으로 어떤 컬럼명에서 꺼내서 vo의 변수에 넣어줄지 mapping을 해주어야 함. -->
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+

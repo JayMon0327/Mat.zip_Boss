@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="board">
+
+	<insert id="create" parameterType="BoardVO">
+		insert into board values
+		(null, #{writer}, #{title}, #{content},now(),now(),0,0)
+	</insert>
+	<delete id="del" parameterType="int">
+		delete from board where board_id
+		= #{board_id}
+	</delete>
+
+	<update id="up" parameterType="BoardVO">
+		update board set content =
+		#{content},title= #{title} where board_id = #{board_id}
+	</update>
+	<update id="view" parameterType="BoardVO">
+		update board set viewscount =
+		viewscount+1 where board_id = #{board_id}
+	</update>
+
+	<!-- 좋아요 버튼구현 -->
+	<update id="increaseLikeCount">
+		UPDATE board
+		SET likecount = likecount + 1
+		WHERE
+		board_id = #{board_id}
+	</update>
+	<update id="decreaseLikeCount">
+		UPDATE board
+		SET likecount = likecount - 1
+		WHERE board_id = #{board_id}
+	</update>
+
+	<insert id="addLike">
+		INSERT INTO likes (user_id, board_id)
+		VALUES (#{user_id}, #{board_id})
+	</insert>
+
+	<delete id="removeLike">
+		DELETE FROM likes
+		WHERE user_id = #{user_id} AND board_id = #{board_id}
+	</delete>
+
+	<select id="isLikedByUser" resultType="boolean">
+		SELECT COUNT(*) FROM likes
+		WHERE user_id = #{user_id} AND board_id = #{board_id}
+	</select>
+	<select id="getLikeCount" resultType="int">
+		SELECT likecount
+		FROM board
+		WHERE board_id = #{board_id}
+	</select>
+<!-- 좋아요 버튼 끝 -->
+
+
+<!-- 검색부분 게시판번호,제목,내용 -->
+	<select id="one" parameterType="int" resultType="BoardVO">
+		select * from
+		board where board_id = #{board_id}
+	</select>
+	<select id="searchByTitleOrContent" parameterType="map" resultType="BoardVO">
+	    select * from board 
+	    where title like concat('%', #{keyword}, '%') 
+	    or content like concat('%', #{keyword}, '%')
+	</select>
+
+	<!-- 검색 부분 끝 -->
+	<select id="detail" parameterType="int" resultType="BoardVO">
+		select * from
+		board where board_id = #{board_id}
+	</select>
+	
+	<!--게시판 페이징  -->
+    <select id="list" resultType="BoardVO">
+        SELECT * FROM board ORDER BY board_id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+	<!-- 전체 게시물 수 조회 -->
+    <select id="count" resultType="int">
+        SELECT COUNT(*) FROM board
+    </select>
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
